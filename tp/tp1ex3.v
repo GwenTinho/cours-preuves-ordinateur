@@ -108,4 +108,47 @@ Qed.
 
 
 
-Lemma pierce : forall A B, ((A -> B) -> A) -> A.
+Lemma pierce : forall A B : Prop, ((A -> B) -> A) -> A.
+Proof.
+  intros A B f.
+  apply not_not_elim.
+  intro.
+  apply H.
+  apply f.
+  intro.
+  contradiction.
+Qed.
+
+
+Lemma de_morgan_forall {X: Set} {A : Prop}: ~ (forall x: X, A) <-> (exists y : X, ~ A).
+Proof.
+  split.
+  intro f.
+  apply not_not_elim.
+  intro.
+  apply f.
+  intro.
+  apply not_not_elim.
+  intro.
+  apply H.
+  exists x.
+  assumption.
+  intros [x H0].
+  intro.
+  apply H0.
+  apply H.
+  apply x.
+Qed.
+
+Lemma de_morgan_exists {X: Set} {A : Prop}: ~ (exists x: X, A) <-> (forall y : X, ~ A).
+Proof.
+  split.
+  intros f x a.
+  apply f.
+  exists x.
+  exact a.
+  intros f [x H0].
+  apply f; assumption.
+Qed.
+
+

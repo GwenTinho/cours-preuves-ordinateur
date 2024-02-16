@@ -4,6 +4,7 @@ Axiom indistinguishability : forall P Q: Prop, P = Q <-> (P <-> Q).
 
 Require Setoid.
 
+
 Definition relation (A B : Type) :=  A -> B -> Prop.
 
 Definition flip (A B : Type) (R : (relation A B)) := fun x y => R y x.
@@ -91,7 +92,7 @@ Proof.
 Qed.
 
 Lemma flip_before : forall A B C (R : relation A B) (Q : relation B C),
-  forall (a : A) (c : C), (^ (R /> Q)) = ((^ Q) /> (^ R)).
+  (^ (R /> Q)) = ((^ Q) /> (^ R)).
 Proof.
   intros.
   apply extensionality.
@@ -116,10 +117,16 @@ Proof.
   split; intro; (assumption + (symmetry;assumption)).
 Qed.
 
+Require Coq.Classes.Morphisms.
+
 
 Definition subrelation (A B : Type) (R Q : relation A B) := forall (a : A) (b : B), R a b -> Q a b.
 
+
+
 Notation "R <= Q" := (subrelation _ _ R Q).
+
+
 
 Lemma subrelation_refl : forall A B (R : relation A B), R <= R.
 Proof.
@@ -201,7 +208,22 @@ Definition deterministic {A B : Type} (R : relation A B) := coreflexive ((^ R) /
 Definition injective {A B : Type} (R : relation A B) := coreflexive (R /> (^ R)).
 Definition full {A B : Type} (R : relation A B) := reflexive (R /> (^ R)).
 
-
+Lemma usual_surjectivity {A B : Type} (R : relation A B) : surjective R <->  forall b : B, exists a : A, R a b.
+Proof.
+  split.
+  intros.
+  destruct (H b b).
+  reflexivity.
+  exists x.
+  destruct H0.
+  assumption.
+  intro.
+  intros b b' eq.
+  destruct (H b).
+  exists x.
+  rewrite <- eq.
+  split; assumption.
+Qed.
 
 
 Lemma surjective_before : forall A B C (R : relation A B) (Q : relation B C),
@@ -211,13 +233,21 @@ Proof.
   unfold surjective, reflexive.
   rewrite flip_before.
   rewrite <- before_assoc.
-  unfold surjective, reflexive in sQ.
-  rewrite <- (before_unit_l B C Q) in sQ.
-
-
-Admitted.
-
-
+  rewrite usual_surjectivity in sR.
+  rewrite usual_surjectivity in sQ.
+  intros c c' eq.
+  destruct (sQ c) as [b sQ'].
+  destruct (sR b) as [a sR'].
+  exists b.
+  split; try assumption.
+  exists a.
+  split; try assumption.
+  exists b.
+  split.
+  assumption.
+  rewrite <- eq.
+  assumption.
+Qed.
 
 
 (*Chapter unions, intersections*)
@@ -256,9 +286,9 @@ Qed.
 Lemma union_preserves_before_left : forall A B C (R1 R2 : relation A B) (Q : relation B C),
   (R1 /> Q) +/ (R2 /> Q) = ((R1 +/ R2) /> Q).
 Proof.
-  intros.
+  intros A B C R1 R2 Q.
   apply extensionality.
-  intro.
+  intro a.
   apply extensionality.
   intro c.
   rewrite indistinguishability.
@@ -283,8 +313,49 @@ Proof.
   split; assumption.
 Qed.
 
+Require Import List.
+Import ListNotations.
 
-(*Lemma union_preserves_subrelation*)
+Ltac extensionality_intros name := apply extensionality; intro name.
+
+
+Lemma unbounded_union_preserves_before_left : forall I A B C (Rs : I -> relation A B) (Q : relation B C),
+  unbounded_union (fun i => (Rs i) /> Q) = ((unbounded_union Rs) /> Q).
+Proof.
+  intros I A B C Rs Q.
+  extensionality_intros a.
+  extensionality_intros c.
+  rewrite indistinguishability.
+  split.
+  {
+  intros [i [b [HL HR]]].
+  exists b.
+  split.
+    {
+      exists i.
+      assumption.
+    }
+    {
+      assumption.
+    }}
+  {
+    intros [b [[i HL] HR]].
+    exists i.
+    exists b.
+    split;assumption.
+  }
+Qed.
+
+
+Lemma union_preserves_subrelation : forall I A B (Rs : I -> relation A B) (Qs : I -> relation A B),
+  (forall i, (Rs i) <= (Qs i)) -> unbounded_union Rs <= unbounded_union Qs.
+Proof.
+  intros I A B Rs Qs H a a' [i K].
+  exists i.
+  apply H.
+  assumption.
+Qed.
+
 
 
 (*Chapter: closures*)
@@ -313,6 +384,18 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma exponent_endorelation_sum : forall {A : Type} (R : relation A A) (n m : nat),
+  (exponent_endorelation R (S n) /> exponent_endorelation R (S m)) = (exponent_endorelation R (S n + S m)).
+Proof.
+  intros A R n m.
+  extensionality_intros a.
+  extensionality_intros a'.
+  rewrite indistinguishability.
+  split.
+
+Admitted.
+
+
 
 
 Definition closureTrans {A : Type} (R : relation A A) := unbounded_union (fun x => exponent_endorelation R (S x) ).
@@ -336,19 +419,48 @@ Qed.
 Lemma closureTrans_correct : forall A (R : relation A A), transitive (closureTrans R).
 Proof.
   intros A R a a' [x [[i TL] [j TR]]].
+  exists (S i + j).
+  simpl.
+
+
 
 Admitted.
+
+(*Closure interactions*)
 
 
 (*Chapter: equivalence relations*)
 
 Definition equivalence_relation {A : Type} (R : relation A A) := reflexive R /\ symmetric R /\ transitive R.
 
+Definition closure_Equiv {A : Type} (R : relation A A) := closureTrans (closureSym (closureRefl R)).
+
+
+Lemma closure_Equiv_correct : forall A (R : relation A A), equivalence_relation (closure_Equiv R).
+Proof.
+Admitted.
+
 Lemma equivalence_flip : forall A (R : relation A A), equivalence_relation R -> equivalence_relation (^ R) /\ R = ^ R.
 Proof.
 Admitted.
 
 (*Chapter: quotients*)
+
+Definition compatible {A B : Type} (R : relation A A) (f : A -> B) :=
+  equivalence_relation R -> forall a a', R a a' -> f a = f a'.
+
+
+
+Axiom Quotient : forall (X : Type) (R : relation X X) (p : equivalence_relation R), Type.
+
+Axiom Quotient_map : forall (X : Type) (R : relation X X) (p : equivalence_relation R), X -> Quotient X R p.
+
+Axiom Quotient_map_preserves : forall (X : Type) (R : relation X X) (p : equivalence_relation R), compatible R (Quotient_map X R p).
+
+Axiom univ_quot : forall X Y (R : relation X X) (f : X -> Y) (p : equivalence_relation R),
+   compatible R f -> exists! g : (Quotient X R p) -> Y, forall x : X, g (Quotient_map X R p x) = f x.
+
+Definition generated_equiv {X Y} (f g : X -> Y) := closure_Equiv (fun y y' => exists x, f x = y /\ g x = y').
 
 (* how to do this*)
 
@@ -472,7 +584,7 @@ Proof.
   exact I.
 Qed.
 
-Definition join {A} (I : Type) (R : relation A A) (p : preorder R) (f : I -> A) :=
+Definition join (A : Type) (I : Type) (R : relation A A) (p : preorder R) (f : I -> A) :=
   exists x: A, forall (x' : A) (i: I), R (f i ) x' -> R x x'.
 
 Definition binary_join := join bool.
