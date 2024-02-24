@@ -120,7 +120,7 @@ Proof.
 Qed.
 
 
-Lemma de_morgan_forall {X: Set} {A : Prop}: ~ (forall x: X, A) <-> (exists y : X, ~ A).
+Lemma de_morgan_forall {X: Set} {A : X -> Prop}: ~ (forall x: X, A x) <-> (exists y : X, ~ (A y)).
 Proof.
   split.
   intro f.
@@ -136,11 +136,10 @@ Proof.
   intros [x H0].
   intro.
   apply H0.
-  apply H.
-  apply x.
+  apply (H x).
 Qed.
 
-Lemma de_morgan_exists {X: Set} {A : Prop}: ~ (exists x: X, A) <-> (forall y : X, ~ A).
+Lemma de_morgan_exists {X: Set} {A : X -> Prop}: ~ (exists x: X, A x) <-> (forall y : X, ~ (A y)).
 Proof.
   split.
   intros f x a.
@@ -148,7 +147,18 @@ Proof.
   exists x.
   exact a.
   intros f [x H0].
-  apply f; assumption.
+  apply (f x); assumption.
 Qed.
 
+
+Lemma implication_swap {X : Set} {P : X -> Prop} {A: Prop} : (forall x : X, (P x -> A)) <-> ((exists x : X, P x) -> A).
+Proof.
+  split.
+  intros f (x, a).
+  apply (f x); assumption.
+  intros f x a.
+  apply f.
+  exists x.
+  assumption.
+Qed.
 

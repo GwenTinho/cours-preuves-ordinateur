@@ -601,3 +601,4 @@ Definition meet {A I} (R : relation A A) (p : preorder R) (f : I -> A) :=
 
 (*Chapter, quotient of any preorder is a univeral poset*)
 
+(*Free forget constructions and universal algebra*)
