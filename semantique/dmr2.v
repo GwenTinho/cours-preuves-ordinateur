@@ -248,7 +248,8 @@ Notation "$" := (pm_unit _).
 Inductive pm_closure {M : pointed_magma} (R : relation (| M |) (| M |))  : | M | -> | M | -> Prop :=
   | Inclusion : forall a b, R a b -> pm_closure R a b
   | Units : pm_closure R $ $
-  | Products : forall a b a' b' : | M |, pm_closure R a b -> pm_closure R a' b' -> pm_closure R (a /* a') (b /* b')
+  | Products_Left : forall a b c : | M |, pm_closure R a b -> pm_closure R (c /* a) (c /* b)
+  | Products_Right : forall a b c : | M |, pm_closure R a b -> pm_closure R (a /* c) (b /* c)
 .
 
 Lemma pm_closure_of_er_is_reflexive : forall (M : pointed_magma) (R : relation (| M |) (| M |)),
@@ -271,93 +272,9 @@ Proof.
     apply Symm.
     assumption.
   - apply Units.
-  - apply Products; assumption.
+  - apply Products_Left; assumption.
+  - apply Products_Right; assumption.
 Qed.
-
-Lemma pm_closure_of_composition_if : forall (M : pointed_magma) (R P: relation (| M |) (| M |)),
-  pm_closure (R /> P) <= ((pm_closure R) /> (pm_closure P)).
-Proof.
-  intros M R P a b H.
-  induction H.
-  - destruct H  as [c [HL HR]].
-    exists c.
-    split; apply Inclusion; assumption.
-  - exists $.
-    split; apply Units.
-  - destruct IHpm_closure1 as [c [HL1 HR1]].
-    destruct IHpm_closure2 as [c' [HL2 HR2]].
-    exists (c /* c').
-    split; apply Products; assumption.
-Qed.
-
-Definition nat_pm : pointed_magma :=
-{|
-  pm_carrier := nat;
-  pm_mult := fun n m => n * m;
-  pm_unit := 1
-|}.
-
-Definition counterexample (n m : | nat_pm |)  :=
-match (n,m) with
-  | (2,15) => True
-  | (3,7) => True
-  | (5, 11) => True
-  | (_,_) => False
-end.
-
-Inductive closure_refl_trans {A : Type} (R : relation A A) : A -> A -> Prop :=
-  | RT_Inclusion : forall x y, R x y -> closure_refl_trans R x y
-  | RT_Refl : forall x, closure_refl_trans R x x
-  | RT_Trans : forall x y z, closure_refl_trans R x y -> closure_refl_trans R y z -> closure_refl_trans R x z.
-
-Inductive closure_symm {A : Type} (R : relation A A) : A -> A -> Prop :=
-  | S_Inclusion : forall x y, R x y -> closure_symm R x y
-  | S_Symm : forall x y, closure_symm R x y -> closure_symm R y x.
-
-Definition closure_equiv {A : Type} (R : relation A A) := closure_refl_trans (closure_symm R).
-
-Lemma closure_equiv_is_equiv : forall A (R : relation A A), equivalence_relation (closure_equiv R).
-Proof.
-  intros.
-  split.
-  - intros a b eq.
-    rewrite eq.
-    apply RT_Refl.
-  - split.
-    + intros a b H.
-      induction H.
-      * apply RT_Inclusion.
-        apply S_Symm.
-        assumption.
-      * apply RT_Refl.
-      * apply RT_Trans with y; assumption.
-    + intros a b [c [HL HR]].
-      apply RT_Trans with c; assumption.
-Qed.
-
-Definition counterexample_equiv := closure_equiv counterexample.
-
-Lemma counterexample_equiv_breaks_things : ~ transitive (pm_closure counterexample_equiv).
-Proof.
-  intro.
-  assert (G := H 2 77).
-  assert (pm_closure counterexample_equiv 2 15).
-  - apply Inclusion.
-    apply RT_Inclusion.
-    apply S_Inclusion.
-    exact I.
-  - assert (pm_closure counterexample_equiv 15 77).
-    + assert (K := Products counterexample_equiv 3 7 5 11).
-      simpl in K.
-      apply K;
-      apply Inclusion;
-      apply RT_Inclusion;
-      apply S_Inclusion;
-      exact I.
-    + assert (L : (pm_closure counterexample_equiv /> pm_closure counterexample_equiv) 2 77).
-      exists 15. split; assumption.
-      apply G in L.
-Admitted.
 
 
 
@@ -375,15 +292,6 @@ Proof.
     apply (Sub a b H c K).
 Qed.
 
-Lemma phi_inclusion : forall (M : pointed_magma) (R : relation (| M |) (| M |)),
-  equivalence_relation R -> R <= phi (pm_closure R).
-Proof.
-  intros M R [Refl [Symm Trans]] a b Rel c H.
-  generalize dependent c.
-Admitted.
-
-
-
 
 Lemma pm_closure_of_er_is_transitive : forall (M : pointed_magma) (R : relation (| M |) (| M |)),
   equivalence_relation R -> transitive (pm_closure R).
@@ -393,7 +301,7 @@ Proof.
   intros a b Closure c.
 
   induction Closure.
-  - intros c K.
+  - intros K.
     induction K.
     * apply Inclusion.
       apply Trans.
@@ -403,13 +311,3 @@ Proof.
       admit.
   - intros b H. assumption.
   - admit.
-
-
-
-
-
-Theorem pm_closure_preserves_equivalence_relations : forall (M : pointed_magma) (R : relation (| M |) (| M |)),
-  equivalence_relation R -> equivalence_relation (pm_closure R).
-Proof.
-
-Admitted.
