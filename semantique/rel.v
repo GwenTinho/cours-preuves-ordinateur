@@ -395,6 +395,35 @@ Proof.
 
 Admitted.
 
+Inductive closure_refl_trans {A : Type} (R : relation A A) : A -> A -> Prop :=
+  | RT_Inclusion : forall x y, R x y -> closure_refl_trans R x y
+  | RT_Refl : forall x, closure_refl_trans R x x
+  | RT_Trans : forall x y z, closure_refl_trans R x y -> closure_refl_trans R y z -> closure_refl_trans R x z.
+
+Inductive closure_symm {A : Type} (R : relation A A) : A -> A -> Prop :=
+  | S_Inclusion : forall x y, R x y -> closure_symm R x y
+  | S_Symm : forall x y, closure_symm R x y -> closure_symm R y x.
+
+Definition closure_equiv {A : Type} (R : relation A A) := closure_refl_trans (closure_symm R).
+
+Lemma closure_equiv_is_equiv : forall A (R : relation A A), equivalence_relation (closure_equiv R).
+Proof.
+  intros.
+  split.
+  - intros a b eq.
+    rewrite eq.
+    apply RT_Refl.
+  - split.
+    + intros a b H.
+      induction H.
+      * apply RT_Inclusion.
+        apply S_Symm.
+        assumption.
+      * apply RT_Refl.
+      * apply RT_Trans with y; assumption.
+    + intros a b [c [HL HR]].
+      apply RT_Trans with c; assumption.
+Qed.
 
 
 
@@ -602,3 +631,57 @@ Definition meet {A I} (R : relation A A) (p : preorder R) (f : I -> A) :=
 (*Chapter, quotient of any preorder is a univeral poset*)
 
 (*Free forget constructions and universal algebra*)
+
+Record pointed_magma := mkPointedMagma {
+  pm_carrier :> Set;
+  pm_mult : pm_carrier -> pm_carrier -> pm_carrier;
+  pm_unit : pm_carrier
+}.
+
+Notation "a /* b" := (pm_mult _ a b) (at level 20).
+Notation "$" := (pm_unit _).
+
+Inductive pm_closure {M : pointed_magma} (R : relation M M)  : M -> M -> Prop :=
+  | Inclusion : forall a b, R a b -> pm_closure R a b
+  | Units : pm_closure R $ $
+  | Products : forall a b a' b' : M, pm_closure R a b -> pm_closure R a' b' -> pm_closure R (a /* a') (b /* b')
+.
+
+Lemma pm_closure_of_er_is_reflexive : forall (M : pointed_magma) (R : relation M M),
+  equivalence_relation R -> reflexive (pm_closure R).
+Proof.
+  intros M R [Refl [Symm Trans]] a b eq.
+  apply Inclusion.
+  rewrite eq.
+  apply Refl.
+  reflexivity.
+Qed.
+
+
+Lemma pm_closure_of_er_is_symmetric : forall (M : pointed_magma) (R : relation M M),
+  equivalence_relation R -> symmetric (pm_closure R).
+Proof.
+  intros M R [Refl [Symm Trans]] a b H.
+  induction H.
+  - apply Inclusion.
+    apply Symm.
+    assumption.
+  - apply Units.
+  - apply Products; assumption.
+Qed.
+
+Lemma pm_closure_of_composition_if : forall (M : pointed_magma) (R P: relation M M),
+  pm_closure (R /> P) <= ((pm_closure R) /> (pm_closure P)).
+Proof.
+  intros M R P a b H.
+  induction H.
+  - destruct H  as [c [HL HR]].
+    exists c.
+    split; apply Inclusion; assumption.
+  - exists $.
+    split; apply Units.
+  - destruct IHpm_closure1 as [c [HL1 HR1]].
+    destruct IHpm_closure2 as [c' [HL2 HR2]].
+    exists (c /* c').
+    split; apply Products; assumption.
+Qed.
