@@ -395,35 +395,7 @@ Proof.
 
 Admitted.
 
-Inductive closure_refl_trans {A : Type} (R : relation A A) : A -> A -> Prop :=
-  | RT_Inclusion : forall x y, R x y -> closure_refl_trans R x y
-  | RT_Refl : forall x, closure_refl_trans R x x
-  | RT_Trans : forall x y z, closure_refl_trans R x y -> closure_refl_trans R y z -> closure_refl_trans R x z.
 
-Inductive closure_symm {A : Type} (R : relation A A) : A -> A -> Prop :=
-  | S_Inclusion : forall x y, R x y -> closure_symm R x y
-  | S_Symm : forall x y, closure_symm R x y -> closure_symm R y x.
-
-Definition closure_equiv {A : Type} (R : relation A A) := closure_refl_trans (closure_symm R).
-
-Lemma closure_equiv_is_equiv : forall A (R : relation A A), equivalence_relation (closure_equiv R).
-Proof.
-  intros.
-  split.
-  - intros a b eq.
-    rewrite eq.
-    apply RT_Refl.
-  - split.
-    + intros a b H.
-      induction H.
-      * apply RT_Inclusion.
-        apply S_Symm.
-        assumption.
-      * apply RT_Refl.
-      * apply RT_Trans with y; assumption.
-    + intros a b [c [HL HR]].
-      apply RT_Trans with c; assumption.
-Qed.
 
 
 
@@ -686,7 +658,35 @@ Proof.
     split; apply Products; assumption.
 Qed.
 
+Inductive closure_refl_trans {A : Type} (R : relation A A) : A -> A -> Prop :=
+  | RT_Inclusion : forall x y, R x y -> closure_refl_trans R x y
+  | RT_Refl : forall x, closure_refl_trans R x x
+  | RT_Trans : forall x y z, closure_refl_trans R x y -> closure_refl_trans R y z -> closure_refl_trans R x z.
 
+Inductive closure_symm {A : Type} (R : relation A A) : A -> A -> Prop :=
+  | S_Inclusion : forall x y, R x y -> closure_symm R x y
+  | S_Symm : forall x y, closure_symm R x y -> closure_symm R y x.
+
+Definition closure_equiv {A : Type} (R : relation A A) := closure_refl_trans (closure_symm R).
+
+Lemma closure_equiv_is_equiv : forall A (R : relation A A), equivalence_relation (closure_equiv R).
+Proof.
+  intros.
+  split.
+  - intros a b eq.
+    rewrite eq.
+    apply RT_Refl.
+  - split.
+    + intros a b H.
+      induction H.
+      * apply RT_Inclusion.
+        apply S_Symm.
+        assumption.
+      * apply RT_Refl.
+      * apply RT_Trans with y; assumption.
+    + intros a b [c [HL HR]].
+      apply RT_Trans with c; assumption.
+Qed.
 
 
 Inductive R_mon {M : pointed_magma} : M -> M -> Prop :=
@@ -714,3 +714,184 @@ Proof.
             --apply Units.
           ++ admit.
 Admitted.
+
+(*More relations*)
+
+Definition extension {A B C: Type} (Q : relation A C) (R : relation A B) (c : C) (b : B)  :=
+  forall a : A, Q a c -> R a b.
+
+Infix "|>" := extension (at level 50).
+
+
+(*right kan extension internal in REL !!!*)
+
+Definition restriction {A B C} (R : relation A B) (Q : relation C B) (a : A) (c : C) :=
+  forall b : B, Q c b -> R a b.
+
+Infix "<|" := restriction (at level 50).
+
+Definition subset_left {A} (P : A -> Prop) : relation unit A := fun _ y => P y.
+Definition subset_right {A} (P : A -> Prop) : relation A unit := fun x _ => P x.
+
+Example extension_example1 : forall A (P : A -> Prop) (Q : relation A A),
+  forall x : A, (Q |> (subset_right P)) x tt <-> forall x': A, Q x' x -> P x'.
+Proof.
+Admitted.
+
+Example restriction_example1 : forall A (P : A -> Prop) (Q : relation A A),
+  forall x : A, ((subset_left P) <| Q) tt x <-> forall x': A, Q x x' -> P x'.
+Proof.
+Admitted.
+
+Theorem adjointness_for_extensions : forall A B C (R : relation A B) (P : relation A C) (Q : relation C B),
+  Q <= (P |> R) <-> ((P /> Q) <= R).
+
+
+Theorem adjointness_for_restrictions : forall A B C (R : relation A B) (P : relation A C) (Q : relation C B),
+   ((P /> Q) <= R) <-> P <= (R  <| Q).
+
+Lemma variance_of_extension : forall A B C (R R': relation A B) (Q Q' : relation A C),
+  Q' |> R <= Q |> R'.
+
+
+Lemma variance_of_restriction : forall A B C (R R': relation A B) (Q Q' : relation C B),
+  R <| Q' <= R' <| Q.
+
+Lemma flip_restriction : forall A B C (R: relation A B) (Q : relation C B),
+  (^ (R <| Q)) = (^ Q) |> (^ R).
+
+
+Lemma flip_extension : forall A B C (R: relation A B) (Q : relation A C),
+  (^ (R |> Q)) = (^ Q) <| (^ R).
+
+Definition complement {A B} (R : relation A B) (a : A) (b : B) := ~ R a b.
+
+Notation "- R" := (complement R).
+
+Lemma complement_decreasing : forall A B (R R' : relation A B),
+  R <= R' -> - R' <= - R.
+
+Lemma de_morgan_1 : forall A B (R P Q : relation A B),
+  - (R +/ Q) = (- R */ - Q).
+
+Lemma de_morgan_2 : forall A B (R P Q : relation A B),
+  - (R */ Q) = (- R +/ - Q).
+
+Lemma complement_full : forall A B, - (Full A B) = Empty A B.
+Lemma complement_empty : forall A B, - (Empty A B) = Full A B.
+Lemma complement_opposite : forall A B (R : relation A B), - (^ R) = ^ (- R).
+Lemma complement_composition_1 : forall A B C (R : relation A B) (Q : relation B C),
+  - (R /> Q) = (^ R) |> (- Q).
+Lemma complement_involution : forall A B (R : relation A B), - (- R) = R.
+
+Lemma complement_composition_2 : forall A B C (R : relation A B) (Q : relation B C),
+  - (R /> Q) = (- R) <| (^ Q).
+
+Lemma complement_extension : forall A B C (R: relation A B) (Q : relation A C),
+  - (Q |> R) = ((^ Q) /> (- R)).
+
+Lemma extension_flip : forall A B C (R: relation A B) (Q : relation A C),
+  (^ (Q |> R)) = (- R) |> (- Q).
+
+
+Lemma restriction_flip : forall A B C (R: relation A B) (Q : relation C B),
+  (^ (R <| Q)) = (- Q) <| (- R).
+
+(*Chapter fixpoints :*)
+
+Definition comptabible_with_magma {M : pointed_magma} (R : relation M M) := forall x y: M, pm_closure R x y <-> R x y.
+
+
+
+Lemma equiv_closure_of_pm_closure_is_compatible : forall (M : pointed_magma) (R : relation M M),
+  comptabible_with_magma (closure_equiv (pm_closure R)).
+Proof.
+  intros M R x y.
+  split.
+  * intro H.
+    induction H.
+    + assumption.
+    + apply RT_Refl.
+    + apply RT_Inclusion.
+      apply S_Inclusion.
+      apply Products.
+
+Admitted.
+
+
+Definition ars (A : Type) := relation A A.
+
+Definition church_rosser {A : Type} (R : ars A) :=
+  closure_equiv R <= ((closure_refl_trans R) /> (^ (closure_refl_trans R))).
+
+(* Note the converse is always true.*)
+
+Definition confluence {A : Type} (R Q : ars A) := ((^ R) /> R) <= (Q /> (^ Q)).
+
+Lemma det_confluence : forall A (R : ars A), deterministic R <-> (confluence R (ID A)).
+
+Definition diamond_property {A : Type} (R : ars A) := confluence R R.
+
+Definition locally_confluent {A : Type} (R : ars A) := confluence R (closure_refl_trans R).
+Definition confluent {A : Type} (R : ars A) := confluence (closure_refl_trans R) (closure_refl_trans R).
+
+
+(*deterministic -> diamond -> locally*)
+
+Lemma deterministic_implies_diamond : forall A (R : ars A), deterministic R -> diamond_property R.
+Lemma diamond_implies_locally_confluent : forall A (R : ars A), diamond_property R -> locally_confluent R.
+
+Lemma flip_of_refl_trans_closure : forall A (R : ars A), (^ (closure_refl_trans R)) = (closure_refl_trans (^ R)).
+Proof.
+  intros A R.
+  extensionality_intros a.
+  extensionality_intros b.
+  apply indistinguishability.
+  split.
+  * intro H.
+    induction H.
+    + apply RT_Inclusion.
+      assumption.
+    + apply RT_Refl.
+    + apply RT_Trans with y; assumption.
+  * intro H.
+    induction H.
+    + apply RT_Inclusion.
+      assumption.
+    + apply RT_Refl.
+    + apply RT_Trans with y; assumption.
+Qed.
+
+
+
+Theorem church_rosser_iff_confluent : forall A (R : ars A), church_rosser R <-> confluent R.
+
+Lemma rt_closure_locally_confluent_iff_confluent: forall A (R : ars A),
+  locally_confluent (closure_refl_trans R) <-> confluent R.
+
+
+Lemma diamond_implies_confluence : forall A (R : ars A), diamond_property R -> confluent R.
+
+(*closure union formula*)
+
+(*prove strong induction*)
+(*use union expression to use strong induction on n+m !!*)
+
+Lemma sandwicz_theorem : forall A (R Q : ars A),
+  R <= Q -> Q <= (closure_refl_trans R) -> diamond_property Q -> confluent R.
+
+Definition normalization {A: Type} (R : ars A) := (closure_refl_trans R) */ (Empty A A <| R).
+
+(*R hat contains normal forms*)
+
+Theorem confluent_implies_normalization_deterministic : forall A (R : ars A),
+  confluent R -> deterministic (normalization R).
+
+(*TODO*)
+(*Define weakly diverging terms*)
+(*Define strongly normalizing terms*)
+(*define fixpoint operators in this context*)
+
+(*van neuman theorem*)
+
+

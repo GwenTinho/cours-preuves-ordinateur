@@ -146,7 +146,7 @@ Qed.
 Theorem closure_break_not_transitive : ~ transitive (pm_closure break).
 Proof.
   rewrite <- explicit_closure_of_break_is_correct.
-  intro.
+  intro H.
   assert (G := H A Top).
   assert (explicit_closure_of_break A Top -> False).
   * intros [L| R]; contradiction.
