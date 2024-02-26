@@ -123,10 +123,6 @@ Qed.
 
 
 
-Inductive R_mon {M : pointed_magma} : M -> M -> Prop :=
-| Assoc : forall a b c, R_mon ((a /* b) /* c) (a /* (b /* c))
-| Unit_r : forall a, R_mon (a /* $) a
-| Unit_l : forall a, R_mon ($ /* a) a.
 
 Inductive lat : Type :=
 | A : lat
@@ -232,3 +228,17 @@ Proof.
     + right. exact I.
     + left. exact I.
 Qed.
+
+Theorem counterexample : ~ (forall (M : pointed_magma) (R : relation M M), equivalence_relation R -> equivalence_relation (pm_closure R)).
+Proof.
+  intro H.
+  assert (G := H L break).
+  assert (K := break_equiv).
+  apply G in K.
+  rewrite <- explicit_closure_of_break_is_correct in K.
+  destruct K as [Refl [Symm Trans]].
+  assert (KN := closure_break_not_transitive).
+  rewrite <- explicit_closure_of_break_is_correct in KN.
+  contradiction.
+Qed.
+

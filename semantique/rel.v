@@ -685,3 +685,32 @@ Proof.
     exists (c /* c').
     split; apply Products; assumption.
 Qed.
+
+
+
+
+Inductive R_mon {M : pointed_magma} : M -> M -> Prop :=
+| Assoc : forall a b c, R_mon ((a /* b) /* c) (a /* (b /* c))
+| Unit_r : forall a, R_mon (a /* $) a
+| Unit_l : forall a, R_mon ($ /* a) a.
+
+Lemma R_mon_still_works : forall M : pointed_magma, equivalence_relation (pm_closure (closure_equiv (@R_mon M))).
+Proof.
+  intro M.
+  split.
+  * apply pm_closure_of_er_is_reflexive.
+    apply closure_equiv_is_equiv.
+  * split.
+    + apply pm_closure_of_er_is_symmetric.
+      apply closure_equiv_is_equiv.
+    + intros a c [b [HL HR]].
+      induction HL;induction HR.
+      - apply Inclusion.
+        apply RT_Trans with a0; assumption.
+      - replace $ with (@pm_mult M $ $).
+        **replace a with (a /* $).
+          ++apply Products.
+            --apply Inclusion. assumption.
+            --apply Units.
+          ++ admit.
+Admitted.
