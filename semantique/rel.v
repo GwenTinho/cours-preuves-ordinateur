@@ -72,6 +72,7 @@ Proof.
 Qed.
 
 
+
 Lemma before_unit_r : forall A B (R : relation A B), (R /> (ID B)) = R.
 Proof.
   intros.
@@ -744,11 +745,40 @@ Proof.
 Admitted.
 
 Theorem adjointness_for_extensions : forall A B C (R : relation A B) (P : relation A C) (Q : relation C B),
-  Q <= (P |> R) <-> ((P /> Q) <= R).
+    Q <= (P |> R) <-> ((P /> Q) <= R).
+Proof.
+  intros A B C R P Q.
+  split.
+  * intros H x z [y [KL KR]].
+    unfold extension in H.
+    specialize (H  y z KR) as G.
+    simpl in G.
+    apply (G x).
+    assumption.
+  * intros H x z K y K0.
+    apply H.
+    exists x.
+    split; assumption.
+Qed.
+    
 
 
 Theorem adjointness_for_restrictions : forall A B C (R : relation A B) (P : relation A C) (Q : relation C B),
-   ((P /> Q) <= R) <-> P <= (R  <| Q).
+    ((P /> Q) <= R) <-> P <= (R  <| Q).
+Proof.
+  intros A B C R P Q.
+  split.
+  * intros H x z K y K0.
+    apply H.
+    exists z.
+    split; assumption.
+  * intros H x z [y [KL KR]].
+    unfold restriction in H.
+    specialize (H x y KL ) as G.
+    simpl in G.
+    apply (G z).
+    assumption.
+Qed.
 
 Lemma variance_of_extension : forall A B C (R R': relation A B) (Q Q' : relation A C),
   Q' |> R <= Q |> R'.
