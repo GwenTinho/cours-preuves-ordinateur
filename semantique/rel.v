@@ -430,6 +430,14 @@ Admitted.
 
 (*Closure interactions*)
 
+Definition closure_operation {A B} (F : relation A B -> relation A B) := forall R R',
+    R <= R' -> F R <= F R' /\ R <= F R /\ F (F R) = F R.                   
+
+
+Inductive leastFP_closures {A B} (F : relation A B -> relation A B) (Q : relation A B) : (closure_operation F) -> relation A B :=
+| LFP_inclusion : forall a b, Q a b -> leastFP_closures F Q a b
+| LFP_iteration : forall a b, leastFP_closures F Q a b -> F (@leastFP_closures A B F Q) a b.                                       
+
 
 (*Chapter: equivalence relations*)
 
@@ -781,71 +789,189 @@ Proof.
 Qed.
 
 Lemma variance_of_extension : forall A B C (R R': relation A B) (Q Q' : relation A C),
-  Q' |> R <= Q |> R'.
+   Q <= Q' -> R <= R' -> Q' |> R <= Q |> R'.
+Proof.
+  intros A B C R R' Q Q' SubQ SubR c b H a K.
+  apply SubR.
+  apply H.
+  apply SubQ.
+  apply K.
+Qed.
 
 
 Lemma variance_of_restriction : forall A B C (R R': relation A B) (Q Q' : relation C B),
-  R <| Q' <= R' <| Q.
+    Q <= Q' -> R <= R' -> R <| Q' <= R' <| Q.
+Proof.
+  intros A B C R R' Q Q' SubQ SubR a c H b K.
+  apply SubR.
+  apply H.
+  apply SubQ.
+  apply K.
+Qed.
+  
 
 Lemma flip_restriction : forall A B C (R: relation A B) (Q : relation C B),
-  (^ (R <| Q)) = (^ Q) |> (^ R).
+    (^ (R <| Q)) = (^ Q) |> (^ R).
+Proof.
+  intros A B C R Q.
+  extensionality_intros c.
+  extensionality_intros a.
+  rewrite indistinguishability.
+  split.
+  * intros H b K.
+    apply H.
+    apply K.
+  * intros H b K.
+    apply H.
+    apply K.
+Qed.
 
 
 Lemma flip_extension : forall A B C (R: relation A B) (Q : relation A C),
-  (^ (R |> Q)) = (^ Q) <| (^ R).
+    (^ (R |> Q)) = (^ Q) <| (^ R).
+Proof.
+  intros A B C R Q.
+  extensionality_intros c.
+  extensionality_intros b.
+  rewrite indistinguishability.
+  split.
+  * intros H a K.
+    apply H.
+    apply K.
+  * intros H a K.
+    apply H.
+    apply K.
+Qed.
 
 Definition complement {A B} (R : relation A B) (a : A) (b : B) := ~ R a b.
 
 Notation "- R" := (complement R).
 
 Lemma complement_decreasing : forall A B (R R' : relation A B),
-  R <= R' -> - R' <= - R.
+    R <= R' -> - R' <= - R.
+Proof.
+  intros A B R R' SubR a b H K.
+  apply H.
+  apply SubR.
+  apply K.
+Qed.
+  
+  
 
 Lemma de_morgan_1 : forall A B (R P Q : relation A B),
-  - (R +/ Q) = (- R */ - Q).
+    - (R +/ Q) = (- R */ - Q).
+Proof.
+  intros A B R P Q.
+  extensionality_intros a.
+  extensionality_intros b.
+  rewrite indistinguishability.
+  split.
+  * intro H.
+    split.
+    + intro N.
+      apply H.
+      left.
+      assumption.
+    + intro N.
+      apply H.
+      right.
+      assumption.
+  * intros [HL HR].
+    intros [N | N].
+    + apply HL. assumption.
+    + apply HR. assumption.
+Qed.
+
+Axiom NNPP : forall P : Prop, ~~P -> P.
+
+Lemma double_negation_rewrite : forall P: Prop,( ~~P) = P.
+Proof.
+  intro P.
+  rewrite indistinguishability.
+  split.
+  * apply NNPP.
+  * intros H N. contradiction.
+Qed.
 
 Lemma de_morgan_2 : forall A B (R P Q : relation A B),
-  - (R */ Q) = (- R +/ - Q).
+    - (R */ Q) = (- R +/ - Q).
+Proof.
+  intros A B R P Q.
+  extensionality_intros a.
+  extensionality_intros b.
+  rewrite indistinguishability.
+  split.
+  * intro H.
+    apply NNPP.
+    intro N.
+    apply N.
+    left.
+    intro.
+    apply N.
+    right.
+    intro.
+    apply H.
+    split; assumption.
+  * intros [H | H].
+    + intros [N _]; contradiction.
+    + intros [_ N]; contradiction.
+Qed.
+    
 
 Lemma complement_full : forall A B, - (Full A B) = Empty A B.
-Lemma complement_empty : forall A B, - (Empty A B) = Full A B.
-Lemma complement_opposite : forall A B (R : relation A B), - (^ R) = ^ (- R).
-Lemma complement_composition_1 : forall A B C (R : relation A B) (Q : relation B C),
-  - (R /> Q) = (^ R) |> (- Q).
-Lemma complement_involution : forall A B (R : relation A B), - (- R) = R.
+Proof.
+  intros A B.
+  extensionality_intros a.
+  extensionality_intros b.
+  rewrite indistinguishability.
+  split.
+  * intro H.
+    apply H.
+    exact I.
+  * intro H.
+    contradiction.
+Qed.
 
+Lemma complement_empty : forall A B, - (Empty A B) = Full A B.
+Proof.
+  intros A B.
+  rewrite <- complement_full.
+Admitted.
+  
+Lemma complement_opposite : forall A B (R : relation A B), - (^ R) = ^ (- R).
+Admitted.
+Lemma complement_composition_1 : forall A B C (R : relation A B) (Q : relation B C),
+    - (R /> Q) = (^ R) |> (- Q).
+Admitted.
+  
+Lemma complement_involution : forall A B (R : relation A B), - (- R) = R.
+Admitted.
 Lemma complement_composition_2 : forall A B C (R : relation A B) (Q : relation B C),
   - (R /> Q) = (- R) <| (^ Q).
-
+Admitted.
 Lemma complement_extension : forall A B C (R: relation A B) (Q : relation A C),
   - (Q |> R) = ((^ Q) /> (- R)).
-
+Admitted.
 Lemma extension_flip : forall A B C (R: relation A B) (Q : relation A C),
   (^ (Q |> R)) = (- R) |> (- Q).
-
+Admitted.
 
 Lemma restriction_flip : forall A B C (R: relation A B) (Q : relation C B),
   (^ (R <| Q)) = (- Q) <| (- R).
-
+Admitted.
 (*Chapter fixpoints :*)
 
 Definition comptabible_with_magma {M : pointed_magma} (R : relation M M) := forall x y: M, pm_closure R x y <-> R x y.
 
+(*Counter example is to give the monoid generated of a b c*)
 
-
-Lemma equiv_closure_of_pm_closure_is_compatible : forall (M : pointed_magma) (R : relation M M),
-  comptabible_with_magma (closure_equiv (pm_closure R)).
+Lemma not_pm_closure_of_equiv_is_equiv : ~ (forall (M : pointed_magma) (R : relation M M), equivalence_relation R -> equivalence_relation (pm_closure R)).
 Proof.
-  intros M R x y.
-  split.
-  * intro H.
-    induction H.
-    + assumption.
-    + apply RT_Refl.
-    + apply RT_Inclusion.
-      apply S_Inclusion.
-      apply Products.
+Admitted.
 
+Lemma not_equiv_closure_of_pm_closure_is_compatible : ~ ( forall (M : pointed_magma) (R : relation M M),
+  comptabible_with_magma (closure_equiv (pm_closure R))).
+Proof.
 Admitted.
 
 
@@ -859,7 +985,7 @@ Definition church_rosser {A : Type} (R : ars A) :=
 Definition confluence {A : Type} (R Q : ars A) := ((^ R) /> R) <= (Q /> (^ Q)).
 
 Lemma det_confluence : forall A (R : ars A), deterministic R <-> (confluence R (ID A)).
-
+Admitted.
 Definition diamond_property {A : Type} (R : ars A) := confluence R R.
 
 Definition locally_confluent {A : Type} (R : ars A) := confluence R (closure_refl_trans R).
@@ -869,8 +995,9 @@ Definition confluent {A : Type} (R : ars A) := confluence (closure_refl_trans R)
 (*deterministic -> diamond -> locally*)
 
 Lemma deterministic_implies_diamond : forall A (R : ars A), deterministic R -> diamond_property R.
+Admitted.
 Lemma diamond_implies_locally_confluent : forall A (R : ars A), diamond_property R -> locally_confluent R.
-
+Admitted.
 Lemma flip_of_refl_trans_closure : forall A (R : ars A), (^ (closure_refl_trans R)) = (closure_refl_trans (^ R)).
 Proof.
   intros A R.
@@ -895,13 +1022,14 @@ Qed.
 
 
 Theorem church_rosser_iff_confluent : forall A (R : ars A), church_rosser R <-> confluent R.
-
+Admitted.
+  
 Lemma rt_closure_locally_confluent_iff_confluent: forall A (R : ars A),
   locally_confluent (closure_refl_trans R) <-> confluent R.
-
+Admitted.
 
 Lemma diamond_implies_confluence : forall A (R : ars A), diamond_property R -> confluent R.
-
+Admitted.
 (*closure union formula*)
 
 (*prove strong induction*)
@@ -909,14 +1037,14 @@ Lemma diamond_implies_confluence : forall A (R : ars A), diamond_property R -> c
 
 Lemma sandwicz_theorem : forall A (R Q : ars A),
   R <= Q -> Q <= (closure_refl_trans R) -> diamond_property Q -> confluent R.
-
+Admitted.
 Definition normalization {A: Type} (R : ars A) := (closure_refl_trans R) */ (Empty A A <| R).
 
 (*R hat contains normal forms*)
 
 Theorem confluent_implies_normalization_deterministic : forall A (R : ars A),
   confluent R -> deterministic (normalization R).
-
+Admitted.
 (*TODO*)
 (*Define weakly diverging terms*)
 (*Define strongly normalizing terms*)
@@ -924,4 +1052,116 @@ Theorem confluent_implies_normalization_deterministic : forall A (R : ars A),
 
 (*van neuman theorem*)
 
+  
 
+Definition implies {A B} (R Q : relation A B) := (- R) +/ Q.
+
+Inductive pm_congruence_closure {M : pointed_magma} (R : ars M) : M -> M -> Prop :=
+| Cong_Inclusion : R <= pm_congruence_closure R
+| Cong_Refl : forall a, pm_congruence_closure R a a
+| Cong_Sym : forall a b, pm_congruence_closure R a b -> pm_congruence_closure R b a
+| Cong_Trans : forall a b c, pm_congruence_closure R a b -> pm_congruence_closure R b c -> pm_congruence_closure R a c| Cong_Units : pm_congruence_closure R $ $
+| Cong_Products : forall a a' b b', pm_congruence_closure R a b -> pm_congruence_closure R a' b' -> pm_congruence_closure R (a /* a') (b /* b').
+
+Lemma pm_congruence_closure_is_correct {M : pointed_magma} : forall R : ars M, equivalence_relation (pm_congruence_closure R) /\ comptabible_with_magma (pm_congruence_closure R).
+Proof.
+  intro R.
+  split.
+  * split.
+  - intros a b eq.
+    rewrite eq.
+    apply Cong_Refl.
+  - split.
+    + intros a b Sym.
+      apply Cong_Sym.
+      assumption.
+    + intros a c [b [T1 T2]].
+      apply Cong_Trans with b; assumption.
+      * intros x y.
+        split.
+  - intro H.
+    induction H.
+    + assumption.
+    + apply Cong_Units.
+    + apply Cong_Products; assumption.
+  - intro H.
+    apply Inclusion.
+    assumption.
+Qed.
+
+Definition rel_of_fun {A B} (f : A -> B) a b := f a = b.
+
+Definition respects {A B} (f : A -> B) (R : ars A) :=
+  let Q := rel_of_fun f in
+  coreflexive (^ Q /> R /> Q).
+(*
+Lemma respects_adjunctions {A B} : forall (f : A -> B) (R : ars A),
+    respects f R <-> R <= (((^ f)) |> (ID B)) <| f. 
+*)
+(*TODO add the necessary rewrites*)
+
+Inductive free_magma_carrier (A : Set) : Set :=
+| Unit : free_magma_carrier A
+| Var (a: A) : free_magma_carrier A
+| Pair (a b : free_magma_carrier A) : free_magma_carrier A.
+                                                     
+Definition free_magma (A : Set) : pointed_magma :=
+  {|
+    pm_carrier := free_magma_carrier A;
+    pm_unit := Unit A;
+    pm_mult := fun a b => Pair A a b      
+  |}.
+
+(*define normalization, ie big step*)
+
+Inductive arrow_monoid {S : Set} : ars (free_magma S) :=
+| right_unit : forall t, arrow_monoid (t /* $) t
+| left_unit : forall t, arrow_monoid ($ /* t) t
+| left_assoc : forall a b c, arrow_monoid ((a /* b) /* c) (a /* (b /* c))
+| left_reduce : forall t t' u, arrow_monoid t t' -> arrow_monoid (t /* u) (t' /* u)                                  | right_reduce : forall u u' t, arrow_monoid u u' -> arrow_monoid (t /* u) (t /* u')
+.
+(*next two are exercises show it is strong norm : TODO*)
+
+(*for each x there is a y st S x y iff there is a y' for which R x y'*)
+
+Definition strategy {A : Type} (R : ars A) (S : ars A) : Prop := S <= R /\ (R /> (Full A A)) <= (S /> (Full A A)).
+
+Lemma strategies_unfold {A : Type} : forall (R S : ars A) (x : A), strategy R S <-> (( exists y, S x y) <-> exists y', R x y').
+Proof.
+  intros R S x.
+  split.
+  * intros [H0 H1].
+    split.
+  - intros [y H2].
+    exists y.
+    apply H0.
+    apply H2.
+  - intros [y H2].
+    exists y.
+    specialize (H1 x y).
+    cut ((S /> Full A A) x y -> S x y).
+    + intro H3.
+      apply H3.
+      exists y.
+      split.
+      
+  
+  
+
+                                                                    
+
+Lemma arrow_confl {S : Set} : confluent (@arrow_monoid S).
+Proof.
+  intros a c [b [C0 C1]].
+  
+  
+Admitted.
+
+(*Show strong normalization commutes with transitive closures*)
+                                
+(*if f respects a relation then it respects its closures*)
+
+(*How do i do quotients ...*)
+
+
+  
